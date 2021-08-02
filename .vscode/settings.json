@@ -1,0 +1,38 @@
+{
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "files.associations": {
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "utils.h": "c",
+        "ft2build.h": "c",
+        "shader.h": "c",
+        "v3.h": "c",
+        "glfw3.h": "c",
+        "camera.h": "c",
+        "__hash_table": "c",
+        "__split_buffer": "c",
+        "array": "c",
+        "bitset": "c",
+        "initializer_list": "c",
+        "iterator": "c",
+        "string": "c",
+        "string_view": "c",
+        "unordered_map": "c",
+        "utility": "c",
+        "vector": "c"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[typescript]": {
+        "editor.tabSize": 2,
+        "editor.defaultFormatter": "denoland.vscode-deno"
+    },
+    "deno.enable": true,
+    "deno.lint": true,
+    "deno.unstable": true
+}
