@@ -2,8 +2,9 @@
 #define SHADER_H
 
 #include <stdbool.h>
-#include "mat4.h"
+#include "v2.h"
 #include "v3.h"
+#include "mat4.h"
 
 typedef struct shader
 {
@@ -20,8 +21,10 @@ void shader_setInt(shader_t program, char *name, int value);
 
 void shader_setFloat(shader_t program, char *name, float value);
 
-void shader_setMat4(shader_t program, char *name, mat4_t mat);
+void shader_setV2(shader_t program, char *name, v2_t v);
 
 void shader_setV3(shader_t program, char *name, v3_t v);
+
+void shader_setMat4(shader_t program, char *name, mat4_t mat);
 
 #endif

@@ -8,10 +8,15 @@ static const int INFO_LOG_LEN = 512;
 
 shader_t shader_create(char *vertexPath, char *fragmentPath)
 {
+    char vertexFullPath[512];
+    char fragmentFullPath[512];
+    utils_getFullPath(vertexPath, vertexFullPath);
+    utils_getFullPath(fragmentPath, fragmentFullPath);
+
     int success;
     char infoLog[INFO_LOG_LEN];
 
-    char *vertexShaderSource = utils_getFileContent(vertexPath);
+    char *vertexShaderSource = utils_getFileContent(vertexFullPath);
     unsigned int vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShaderId, 1, (const char *const *)&vertexShaderSource, NULL);
     glCompileShader(vertexShaderId);
@@ -24,7 +29,7 @@ shader_t shader_create(char *vertexPath, char *fragmentPath)
     }
     free(vertexShaderSource);
 
-    char *fragmentShaderSource = utils_getFileContent(fragmentPath);
+    char *fragmentShaderSource = utils_getFileContent(fragmentFullPath);
     unsigned int fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragmentShaderId, 1, (const char *const *)&fragmentShaderSource, NULL);
     glCompileShader(fragmentShaderId);
@@ -78,14 +83,20 @@ void shader_setFloat(shader_t program, char *name, float value)
     glUniform1f(location, value);
 }
 
-void shader_setMat4(shader_t program, char *name, mat4_t mat)
+void shader_setV2(shader_t program, char *name, v2_t v)
 {
     int location = glGetUniformLocation(program.id, name);
-    glUniformMatrix4fv(location, 1, GL_TRUE, (float *)(mat.m));
+    glUniform2f(location, v.x, v.y);
 }
 
 void shader_setV3(shader_t program, char *name, v3_t v)
 {
     int location = glGetUniformLocation(program.id, name);
     glUniform3f(location, v.x, v.y, v.z);
+}
+
+void shader_setMat4(shader_t program, char *name, mat4_t mat)
+{
+    int location = glGetUniformLocation(program.id, name);
+    glUniformMatrix4fv(location, 1, GL_TRUE, (float *)(mat.m));
 }

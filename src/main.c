@@ -6,8 +6,10 @@
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 #include "utils.h"
+#include "v2.h"
 #include "v3.h"
 #include "mat4.h"
+#include "mesh.h"
 #include "shader.h"
 #include "texture.h"
 #include "camera.h"
@@ -17,12 +19,14 @@
 #include "../tmp/sdf_data.h"
 #include "../tmp/msdf_data.h"
 
+static void createQuadVerts(float x, float y, float w, float h, float density, texture_t texture, mesh_vert_t *verts);
+
 static void handleWindowResize(GLFWwindow *window, int width, int height);
 static void handleInput(GLFWwindow *window);
 static void handleMouseMove(GLFWwindow *window, double xPos, double yPos);
 
-static const int WINDOW_WIDTH = 800;
-static const int WINDOW_HEIGHT = 600;
+static const int WINDOW_WIDTH = 1350;
+static const int WINDOW_HEIGHT = 900;
 static const float FOV = M_PI_2;
 static const float Z_NEAR = 0.1f;
 static const float Z_FAR = 100.0f;
@@ -36,9 +40,6 @@ static camera_t playerCamera;
 
 int main(int argc, char **argv)
 {
-    // use path buffers to store paths modified to be absolute
-    char pathBuffer1[1024];
-    char pathBuffer2[1024];
     //
     // Create window
     //
@@ -66,46 +67,37 @@ int main(int argc, char **argv)
     }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     //
-    // textures
+    // Create meshes
     //
-    texture_t softmaskAtlas = texture_create(utils_getFullPath("textures/softmask-atlas.png", pathBuffer1));
-    texture_t sdfAtlas = texture_create(utils_getFullPath("textures/sdf-atlas.png", pathBuffer1));
-    texture_t msdfAtlas = texture_create(utils_getFullPath("textures/msdf-atlas.png", pathBuffer1));
 
-    //
-    // create geometry
-    //
-    font_glyphVert_t *verts = utils_malloc(sizeof(*verts) * 6); // 6 verts per char
-    font_createGlyphVerts(SOFTMASK_DATA, 'X', verts);
+    texture_t scratchesTex = texture_create("textures/scratches.jpg", DIFFUSE);
+    texture_t scratchesSpecularTex = texture_create("textures/scratches.jpg", SPECULAR);
+    texture_t msdfAtlas = texture_create("textures/msdf-atlas.png", DIFFUSE);
 
-    unsigned int VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
+    mesh_vert_t quadVerts[6];
+    texture_t buttonTextures[2] = {scratchesTex, scratchesSpecularTex};
+    mesh_t buttonMesh = mesh_create(quadVerts, 6, buttonTextures, 2);
 
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(*verts) * 6, verts, GL_STREAM_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(font_glyphVert_t),
-                          (void *)offsetof(font_glyphVert_t, pos));
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(font_glyphVert_t),
-                          (void *)offsetof(font_glyphVert_t, texCoords));
-    glEnableVertexAttribArray(1);
+    mesh_vert_t cubeVerts[64];
+    int numCubeVerts = mesh_loadVerts("meshes/cube.obj", cubeVerts);
+    mesh_t cubeMesh = mesh_create(cubeVerts, numCubeVerts, NULL, 0);
+
+    mesh_vert_t *textVerts = utils_malloc(sizeof(*textVerts) * 1024);
+    mesh_t textMesh = mesh_create(textVerts, 1024, &msdfAtlas, 1);
+
+    shader_t buttonShader = shader_create("shaders/vertex.vs", "shaders/shape.fs");
+    shader_t lightShader = shader_create("shaders/vertex.vs", "shaders/solid.fs");
+    shader_t textShader = shader_create("shaders/vertex.vs", "shaders/msdf.fs");
 
     //
     // Initialize loop variables
     //
+    char buttonText[] = "Press X";
     float lastFrame = 0.0f;
-    shader_t rasterShader = shader_create(
-        utils_getFullPath("shaders/vertex.vs", pathBuffer1),
-        utils_getFullPath("shaders/fragment.fs", pathBuffer2));
-    shader_t sdfShader = shader_create(
-        utils_getFullPath("shaders/vertex.vs", pathBuffer1),
-        utils_getFullPath("shaders/sdf.fs", pathBuffer2));
-
     playerCamera = camera_create(v3_create(0.0f, 0.0f, 0.0f), -M_PI_2, 0.0f);
 
     //
@@ -117,53 +109,127 @@ int main(int argc, char **argv)
         dt = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        v3_t directionalLightDir = v3_create(0.0f, -0.5f, -0.5f);
+        v3_t directionalLightColor = v3_create(0.8f, 0.8f, 1.0f);
+
+        int numPointLights = 4;
+        v3_t pointLightPositions[] = {
+            v3_create(0.0f, 0.0f, 0.0f),
+            v3_create(1.0f, 0.0f, 0.0f),
+            v3_create(2.0f, 0.0f, 0.0f),
+            v3_create(3.0f, 0.0f, 0.0f),
+        };
+
         // input
         handleInput(window);
 
         mat4_t viewMat = camera_getViewTransform(playerCamera);
         mat4_t projectionMat = mat4_createProj((float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, FOV, Z_NEAR, Z_FAR);
 
-        // render
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         //
-        // Render rasterized glyph
+        // Render point light
         //
-        glBindTexture(GL_TEXTURE_2D, softmaskAtlas.id);
-        // temp - figure out a way to update buffer data quickly
-        font_createGlyphVerts(SOFTMASK_DATA, 'W', verts);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(*verts) * 6, verts, GL_STREAM_DRAW);
-        //
-        mat4_t rasterModelMat = mat4_createTranslate(v3_create(-2.0f, 0.0f, -2.0f));
-        shader_use(rasterShader);
-        shader_setMat4(rasterShader, "model", rasterModelMat);
-        shader_setMat4(rasterShader, "view", viewMat);
-        shader_setMat4(rasterShader, "projection", projectionMat);
-        shader_setInt(rasterShader, "glyphAtlas", 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        mat4_t lightModelMat = mat4_createIdentity();
+        lightModelMat = mat4_mul(lightModelMat, mat4_createTranslate(v3_create(0.0f, 0.0f, -5.0f)));
+        lightModelMat = mat4_mul(lightModelMat, mat4_createScale(v3_create(0.01, 0.01, 0.01)));
+        shader_use(lightShader);
+        shader_setMat4(lightShader, "model", lightModelMat);
+        shader_setMat4(lightShader, "view", viewMat);
+        shader_setMat4(lightShader, "projection", projectionMat);
+        shader_setV3(lightShader, "color", v3_create(0.8f, 0.8f, 1.0f));
+        mesh_render(cubeMesh, lightShader);
 
         //
-        // Render sdf glyph
+        // Render Button
         //
-        glBindTexture(GL_TEXTURE_2D, sdfAtlas.id);
-        // temp
-        font_createGlyphVerts(SDF_DATA, 'W', verts);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(*verts) * 6, verts, GL_STREAM_DRAW);
+        float textWidth = font_getTextWidth(MSDF_DATA, buttonText);
+        float buttonTexDensity = 800.0f;
+        float buttonWidth = textWidth + 1.0f;
+        float buttonHeight = 1.6f;
+
+        mat4_t buttonModelMat = mat4_createTranslate(v3_create(0.0f, -0.25f, -2.1f));
+
+        shader_use(buttonShader);
+        shader_setMat4(buttonShader, "model", buttonModelMat);
+        shader_setMat4(buttonShader, "view", viewMat);
+        shader_setMat4(buttonShader, "projection", projectionMat);
+        shader_setV3(buttonShader, "viewPos", playerCamera.pos);
+
+        // directional light
+        shader_setV3(buttonShader, "directionalLight.dir", directionalLightDir);
+        shader_setV3(buttonShader, "directionalLight.ambient", v3_mul(directionalLightColor, 0.1f));
+        shader_setV3(buttonShader, "directionalLight.diffuse", v3_mul(directionalLightColor, 0.6f));
+        shader_setV3(buttonShader, "directionalLight.specular", v3_mul(directionalLightColor, 1.0f));
+
+        shader_setFloat(buttonShader, "material.shininess", 32.0f);
+
+        shader_setV2(buttonShader, "dimensions", v2_create(buttonWidth, buttonHeight));
+        shader_setV2(buttonShader, "texDimensions", v2_create(scratchesTex.width, scratchesTex.height));
+        shader_setFloat(buttonShader, "texDensity", buttonTexDensity);
+        shader_setFloat(buttonShader, "cornerRadius", 1.0);
+        createQuadVerts(-0.5f, -0.4f, buttonWidth, buttonHeight, buttonTexDensity, scratchesTex, quadVerts);
+        mesh_setVerts(buttonMesh, quadVerts, 6);
+        mesh_render(buttonMesh, buttonShader);
+
         //
-        mat4_t sdfModelMat = mat4_createTranslate(v3_create(0.0f, 0.0f, -2.0f));
-        shader_use(sdfShader);
-        shader_setMat4(sdfShader, "model", sdfModelMat);
-        shader_setMat4(sdfShader, "view", viewMat);
-        shader_setMat4(sdfShader, "projection", projectionMat);
-        shader_setInt(sdfShader, "glyphAtlas", 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // Render Text
+        //
+        mat4_t msdfModelMat = mat4_createTranslate(v3_create(0.0f, -0.25f, -2.0f));
+        shader_use(textShader);
+        shader_setMat4(textShader, "model", msdfModelMat);
+        shader_setMat4(textShader, "view", viewMat);
+        shader_setMat4(textShader, "projection", projectionMat);
+        // TODO: createGlyphVerts API doesn't gel well with setVerts
+        textMesh.vertsLen = font_createGlyphVerts(MSDF_DATA, buttonText, textMesh.verts);
+        mesh_setVerts(textMesh, textMesh.verts, textMesh.vertsLen);
+        mesh_render(textMesh, textShader);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     return EXIT_SUCCESS;
+}
+
+static void createQuadVerts(float x, float y, float w, float h, float density, texture_t texture, mesh_vert_t *verts)
+{
+    float texRight = density * w / texture.width;
+    float texTop = density * h / texture.height;
+
+    mesh_vert_t bottomLeft = {
+        .pos = v3_create(x, y, 0.0f),
+        .normal = v3_create(0.0f, 0.0f, 1.0f),
+        .texCoords = v2_create(0.0f, 0.0f),
+    };
+
+    mesh_vert_t bottomRight = {
+        .pos = v3_create(x + w, y, 0.0f),
+        .normal = v3_create(0.0f, 0.0f, 1.0f),
+        .texCoords = v2_create(texRight, 0.0f),
+
+    };
+
+    mesh_vert_t topRight = {
+        .pos = v3_create(x + w, y + h, 0.0f),
+        .normal = v3_create(0.0f, 0.0f, 1.0f),
+        .texCoords = v2_create(texRight, texTop),
+    };
+
+    mesh_vert_t topLeft = {
+        .pos = v3_create(x, y + h, 0.0f),
+        .normal = v3_create(0.0f, 0.0f, 1.0f),
+        .texCoords = v2_create(0.0f, texTop),
+    };
+
+    verts[0] = bottomLeft;
+    verts[1] = topRight;
+    verts[2] = topLeft;
+    verts[3] = bottomLeft;
+    verts[4] = bottomRight;
+    verts[5] = topRight;
 }
 
 static void handleWindowResize(GLFWwindow *window, int width, int height)

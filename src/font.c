@@ -11,39 +11,62 @@ static int getGlyphIndex(unsigned char code)
     return code - 32;
 }
 
-// TODO: this can probably be optimised a lot
-void font_createGlyphVerts(font_glyph_t *glyphData, char c, font_glyphVert_t *verts)
+float font_getTextWidth(font_glyph_t *glyphData, char *string)
 {
-    // TODO: take cursor as an argument
+    float width = 0;
+
+    char *pString = string;
+    while (*pString != '\0')
+    {
+        font_glyph_t data = glyphData[getGlyphIndex(*pString)];
+        width += data.advance;
+        ++pString;
+    }
+    return width;
+}
+
+// TODO: this can probably be optimised a lot
+int font_createGlyphVerts(font_glyph_t *glyphData, char *string, mesh_vert_t *verts)
+{
+    int numVerts = 0;
     v3_t cursor = v3_create(0, 0, 0);
 
-    font_glyph_t data = glyphData[getGlyphIndex(c)];
+    char *pString = string;
 
-    font_glyphVert_t bottomLeft = {
-        .pos = v3_add(cursor, v3_create(data.planeLeft, data.planeBottom, 0.0f)),
-        .texCoords = {data.atlasLeft, data.atlasBottom},
-    };
+    while (*pString != '\0')
+    {
+        font_glyph_t data = glyphData[getGlyphIndex(*pString)];
 
-    font_glyphVert_t bottomRight = {
-        .pos = v3_add(cursor, v3_create(data.planeRight, data.planeBottom, 0.0f)),
-        .texCoords = {data.atlasRight, data.atlasBottom},
-    };
+        mesh_vert_t bottomLeft = {
+            .pos = v3_add(cursor, v3_create(data.planeLeft, data.planeBottom, 0.0f)),
+            .texCoords = v2_create(data.atlasLeft, data.atlasBottom),
+        };
 
-    font_glyphVert_t topRight = {
-        .pos = v3_add(cursor, v3_create(data.planeRight, data.planeTop, 0.0f)),
-        .texCoords = {data.atlasRight, data.atlasTop},
-    };
+        mesh_vert_t bottomRight = {
+            .pos = v3_add(cursor, v3_create(data.planeRight, data.planeBottom, 0.0f)),
+            .texCoords = v2_create(data.atlasRight, data.atlasBottom),
+        };
 
-    font_glyphVert_t topLeft = {
-        .pos = v3_add(cursor, v3_create(data.planeLeft, data.planeTop, 0.0f)),
-        .texCoords = {data.atlasLeft, data.atlasTop},
-    };
+        mesh_vert_t topRight = {
+            .pos = v3_add(cursor, v3_create(data.planeRight, data.planeTop, 0.0f)),
+            .texCoords = v2_create(data.atlasRight, data.atlasTop),
+        };
 
-    verts[0] = bottomLeft;
-    verts[1] = topRight;
-    verts[2] = topLeft;
+        mesh_vert_t topLeft = {
+            .pos = v3_add(cursor, v3_create(data.planeLeft, data.planeTop, 0.0f)),
+            .texCoords = v2_create(data.atlasLeft, data.atlasTop),
+        };
 
-    verts[3] = bottomLeft;
-    verts[4] = bottomRight;
-    verts[5] = topRight;
+        cursor = v3_add(cursor, v3_create(data.advance, 0, 0));
+
+        verts[numVerts++] = bottomLeft;
+        verts[numVerts++] = topRight;
+        verts[numVerts++] = topLeft;
+        verts[numVerts++] = bottomLeft;
+        verts[numVerts++] = bottomRight;
+        verts[numVerts++] = topRight;
+        ++pString;
+    }
+
+    return numVerts;
 }

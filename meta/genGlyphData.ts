@@ -3,9 +3,11 @@ import { config } from "https://deno.land/x/dotenv@v1.0.1/mod.ts";
 config({ export: true });
 
 const ATLAS_GEN_PATH = Deno.env.get("MSDF_ATLAS_GEN_PATH")!;
-const ASSET_PATH = `./assets`;
+const FONT_PATH = `./assets/Roboto-Regular.ttf`;
 const TEMP_PATH = `./tmp`;
 const TEXTURES_PATH = `./tmp/textures`;
+
+const EM_SIZE_PX = "32";
 
 type AtlasData = {
   atlas: {
@@ -78,7 +80,8 @@ const generateHeaderFile = async (
     code += `${formatNum(planeTop)}, `;
     code += `${formatNum(planeRight)}, `;
     code += `${formatNum(planeBottom)}, `;
-    code += `${formatNum(planeLeft)}`;
+    code += `${formatNum(planeLeft)}, `;
+    code += `${formatNum(glyph.advance)}`;
     code += `},\n`;
   }
 
@@ -94,9 +97,11 @@ await Deno.run({
   cmd: [
     ATLAS_GEN_PATH,
     "-font",
-    `${ASSET_PATH}/NewYork.ttf`,
+    FONT_PATH,
     "-type",
     "softmask",
+    "-size",
+    EM_SIZE_PX,
     "-imageout",
     `${TEXTURES_PATH}/softmask-atlas.png`,
     "-json",
@@ -114,9 +119,11 @@ await Deno.run({
   cmd: [
     ATLAS_GEN_PATH,
     "-font",
-    `${ASSET_PATH}/NewYork.ttf`,
+    FONT_PATH,
     "-type",
     "sdf",
+    "-size",
+    EM_SIZE_PX,
     "-imageout",
     `${TEXTURES_PATH}/sdf-atlas.png`,
     "-json",
@@ -134,9 +141,11 @@ await Deno.run({
   cmd: [
     ATLAS_GEN_PATH,
     "-font",
-    `${ASSET_PATH}/NewYork.ttf`,
+    FONT_PATH,
     "-type",
     "msdf",
+    "-size",
+    EM_SIZE_PX,
     "-imageout",
     `${TEXTURES_PATH}/msdf-atlas.png`,
     "-json",

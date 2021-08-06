@@ -13,6 +13,7 @@ void *utils_malloc(size_t size)
     return result;
 }
 
+// TODO: unused
 int utils_getToken(char *str, char delim, char *token, char **tokenEnd)
 {
     int tokenLength = 0;
@@ -56,9 +57,9 @@ char *utils_getFileContent(char *path)
     return content;
 }
 
-char *utils_getFullPath(char *relPath, char *buffer)
+void *utils_getFullPath(char *relPath, char *buffer)
 {
-    uint32_t programPathLen = 1024;
+    uint32_t programPathLen = 512;
 
     // TODO: this only works for mac
     if (_NSGetExecutablePath(buffer, &programPathLen) != 0)
@@ -88,9 +89,8 @@ char *utils_getFullPath(char *relPath, char *buffer)
         ++pBuffer;
         ++pRelPath;
     }
-    *pBuffer = '\0';
 
-    return buffer;
+    *pBuffer = '\0';
 }
 
 float utils_clampf(float val, float lower, float upper)

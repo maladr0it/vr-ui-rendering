@@ -3,12 +3,7 @@
 
 #include "v3.h"
 #include "v2.h"
-
-typedef struct font_glyphVert
-{
-    v3_t pos;
-    v2_t texCoords;
-} font_glyphVert_t;
+#include "mesh.h"
 
 typedef struct font_glyph
 {
@@ -23,6 +18,8 @@ typedef struct font_glyph
     float advance;
 } font_glyph_t;
 
-void font_createGlyphVerts(font_glyph_t *glyphData, char c, font_glyphVert_t *verts);
+int font_createGlyphVerts(font_glyph_t *glyphData, char *string, mesh_vert_t *verts);
+
+float font_getTextWidth(font_glyph_t *glyphData, char *string);
 
 #endif
