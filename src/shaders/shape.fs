@@ -31,6 +31,8 @@ uniform sampler2D specular2;
 uniform vec3 viewPos;
 uniform Material material;
 uniform DirectionalLight directionalLight;
+uniform PointLight[16] pointLights;
+uniform int numPointLights;
 
 in vec3 fragPos;
 in vec3 fragNormal;
@@ -73,8 +75,10 @@ vec3 calcPointLight(PointLight light, vec3 normal, vec3 viewDir)
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     
     // result
-    vec3 ambient = light.ambient * vec3(texture(diffuse1, fragTexCoords));
-    vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(diffuse1, fragTexCoords));
+    vec3 ambient = light.ambient * vec3(1.0);
+    vec3 diffuse = light.diffuse * diffuseStrength * vec3(1.0);
+    // vec3 ambient = light.ambient * vec3(texture(diffuse1, fragTexCoords));
+    // vec3 diffuse = light.diffuse * diffuseStrength * vec3(texture(diffuse1, fragTexCoords));
     vec3 specular = light.specular * specularStrength * vec3(texture(specular1, fragTexCoords));
     return (ambient + diffuse + specular) * attenuation;
 } 
@@ -99,7 +103,13 @@ void main()
 {
     vec3 normal = normalize(fragNormal);
     vec3 viewDir = normalize(fragPos - viewPos);
-    vec3 color = calcDirectionalLight(directionalLight, normal, viewDir);
+    vec3 color = vec3(0);
+    color += calcDirectionalLight(directionalLight, normal, viewDir);
+    
+    for (int i = 0; i < numPointLights; ++i)
+    {
+        color += calcPointLight(pointLights[i], normal, viewDir);
+    }
     
     vec2 pos = fragTexCoords * texDimensions / texDensity;
     float sd = sdRoundBox(2 * pos - dimensions, dimensions, vec4(cornerRadius));

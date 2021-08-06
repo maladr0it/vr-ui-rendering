@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <glad/glad.h>
 #include "utils.h"
 #include "shader.h"
@@ -99,4 +100,44 @@ void shader_setMat4(shader_t program, char *name, mat4_t mat)
 {
     int location = glGetUniformLocation(program.id, name);
     glUniformMatrix4fv(location, 1, GL_TRUE, (float *)(mat.m));
+}
+
+// TODO: rename args
+void shader_getUniformString(char *name, int index, char *property, char *out)
+{
+    char *pOut = out;
+    char *pName = name;
+    while (*pName != '\0')
+    {
+        *pOut = *pName;
+        ++pName;
+        ++pOut;
+    }
+
+    char indexStr[16];
+    utils_itoa(index, indexStr);
+    char *pIndexStr = indexStr;
+
+    *pOut = '[';
+    ++pOut;
+    while (*pIndexStr != '\0')
+    {
+        *pOut = *pIndexStr;
+        ++pIndexStr;
+        ++pOut;
+    }
+    *pOut = ']';
+    ++pOut;
+
+    char *pProperty = property;
+    *pOut = '.';
+    ++pOut;
+    while (*pProperty != '\0')
+    {
+        *pOut = *pProperty;
+        ++pProperty;
+        ++pOut;
+    }
+
+    *pOut = '\0';
 }

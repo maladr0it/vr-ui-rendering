@@ -57,7 +57,7 @@ char *utils_getFileContent(char *path)
     return content;
 }
 
-void *utils_getFullPath(char *relPath, char *buffer)
+void utils_getFullPath(char *relPath, char *buffer)
 {
     uint32_t programPathLen = 512;
 
@@ -107,4 +107,37 @@ float utils_clampf(float val, float lower, float upper)
     {
         return val;
     }
+}
+
+void utils_reverse(char *str, int len)
+{
+    char temp;
+    for (int i = 0; i < len / 2; i++)
+    {
+        temp = str[i];
+        str[i] = str[len - i - 1];
+        str[len - i - 1] = temp;
+    }
+}
+
+void utils_itoa(int n, char *str)
+{
+    int i = 0;
+    int is_negative = n < 0;
+
+    do
+    {
+        str[i] = (is_negative ? -1 : 1) * (n % 10) + '0';
+        n /= 10;
+        i++;
+    } while (n != 0);
+
+    if (is_negative)
+    {
+        str[i] = '-';
+        i++;
+    }
+
+    utils_reverse(str, i);
+    str[i] = '\0';
 }

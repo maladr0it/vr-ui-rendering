@@ -27,4 +27,6 @@ void shader_setV3(shader_t program, char *name, v3_t v);
 
 void shader_setMat4(shader_t program, char *name, mat4_t mat);
 
+void shader_getUniformString(char *name, int index, char *property, char *out);
+
 #endif
