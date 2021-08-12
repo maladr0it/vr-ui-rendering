@@ -1,6 +1,6 @@
-# 3D font rendering
+# VR UI rendering
 
-Simple framework to demonstrate how text and basic GUI elements can be rendered efficiently with shaders.
+Simple framework to demonstrate how text and basic GUI elements can be rendered in 3D environments (such as VR) with shaders.
 
 This program utilizes multi-channel signed distance fields (MSDF) to render text efficiently and accurately on the GPU.
 
