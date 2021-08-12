@@ -37,11 +37,11 @@ static const float MOUSE_SENSITIVITY = 0.002f;
 
 // global state
 static bool editMode = false;
-static bool msdfTextMode = false;
 static bool directionalLightEnabled = false;
 static bool pointLightsEnabled = false;
 static char buttonText[64];
 static float cornerRadius = 0.0f;
+static float strokeWidth = 0.1f;
 
 static double lastMouseX = (double)WINDOW_WIDTH / 2.0f;
 static double lastMouseY = (double)WINDOW_HEIGHT / 2.0f;
@@ -85,7 +85,6 @@ int main(int argc, char **argv)
     //
     // Create meshes
     //
-
     texture_t scratchesTex = texture_create("textures/scratches.jpg", DIFFUSE);
     texture_t scratchesSpecularTex = texture_create("textures/scratches.jpg", SPECULAR);
     texture_t msdfAtlas = texture_create("textures/msdf-atlas.png", DIFFUSE);
@@ -226,20 +225,7 @@ int main(int argc, char **argv)
         shader_setMat4(textShader, "model", msdfModelMat);
         shader_setMat4(textShader, "view", viewMat);
         shader_setMat4(textShader, "projection", projectionMat);
-        // TODO: createGlyphVerts API doesn't gel well with setVerts
-        textMesh.vertsLen = font_createGlyphVerts(MSDF_DATA, buttonText, textMesh.verts);
-        mesh_setVerts(textMesh, textMesh.verts, textMesh.vertsLen);
-        mesh_render(textMesh, textShader);
-
-        //
-        // Render Raster Text
-        //
-        v3_t textPos = v3_create(-textWidth / 2.0f, -0.3f, -2.0f);
-        mat4_t msdfModelMat = mat4_createTranslate(textPos);
-        shader_use(textShader);
-        shader_setMat4(textShader, "model", msdfModelMat);
-        shader_setMat4(textShader, "view", viewMat);
-        shader_setMat4(textShader, "projection", projectionMat);
+        shader_setFloat(textShader, "strokeWidth", strokeWidth);
         // TODO: createGlyphVerts API doesn't gel well with setVerts
         textMesh.vertsLen = font_createGlyphVerts(MSDF_DATA, buttonText, textMesh.verts);
         mesh_setVerts(textMesh, textMesh.verts, textMesh.vertsLen);
@@ -326,20 +312,29 @@ static void handleKey(GLFWwindow *window, int key, int scancode, int action, int
             cornerRadius -= 0.1f;
             return;
         }
-        if (key == GLFW_KEY_RIGHT)
-        {
-            pointLightsEnabled = !pointLightsEnabled;
-            return;
-        }
         if (key == GLFW_KEY_LEFT)
         {
-            directionalLightEnabled = !directionalLightEnabled;
-            return;
+            strokeWidth -= 0.1f;
         }
-        if (key == GLFW_KEY_HOME)
+        if (key == GLFW_KEY_RIGHT)
         {
-            msdfTextMode != msdfTextMode;
-            return;
+            strokeWidth += 0.1f;
+        }
+        if (key == GLFW_KEY_LEFT_BRACKET)
+        {
+            if (!editMode)
+            {
+                directionalLightEnabled = !directionalLightEnabled;
+                return;
+            }
+        }
+        if (key == GLFW_KEY_RIGHT_BRACKET)
+        {
+            if (!editMode)
+            {
+                pointLightsEnabled = !pointLightsEnabled;
+                return;
+            }
         }
     }
 }
@@ -348,7 +343,6 @@ static void handleChar(GLFWwindow *window, unsigned int codepoint)
 {
     if (editMode)
     {
-        printf("KEYDOWN\n");
         char c = (char)codepoint;
         strncat(buttonText, &c, 1);
     }

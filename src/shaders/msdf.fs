@@ -7,6 +7,8 @@ uniform sampler2D diffuse3;
 uniform sampler2D specular1;
 uniform sampler2D specular2;
 
+uniform float strokeWidth;
+
 in vec2 fragTexCoords;
 
 out vec4 outColor;
@@ -17,11 +19,10 @@ float median(float r, float g, float b) {
 
 void main() {
     vec3 lineColor = vec3(0.0, 0.0, 0.0);
-    float lineWidth = 0.2;
 
     vec3 msd = texture(diffuse1, fragTexCoords).rgb;
     float sd = 0.5 - median(msd.r, msd.g, msd.b);
-    float dist = sd - lineWidth;
+    float dist = sd - strokeWidth;
 
     float delta = fwidth(dist);
     float alpha = smoothstep(delta, -delta, dist);
